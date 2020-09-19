@@ -21,6 +21,7 @@ add_custom_target(
 add_executable(marching_cubes main.cc)
 target_compile_features(marching_cubes PRIVATE cxx_std_11)
 target_include_directories(marching_cubes PRIVATE ../include)
-target_link_libraries(marching_cubes PRIVATE glew GLU GL SDL2main SDL2-static)
+target_link_libraries(marching_cubes PRIVATE marching_cubes_lib glew GLU GL
+    SDL2main SDL2-static)
 
 add_dependencies(marching_cubes copy_shader_files)

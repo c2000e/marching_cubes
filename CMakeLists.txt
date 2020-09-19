@@ -13,3 +13,4 @@ set(CMAKE_BUILD_TYPE DEBUG)
 include(FetchContent)
 
 add_subdirectory(apps)
+add_subdirectory(src)
