@@ -295,11 +295,6 @@ const std::array<std::array<int, 16>, 256> triTable = {{
 	{ 0,  3,  8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 	{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}}};
 
-float unitSphereSDF(glm::vec3 p)
-{
-    return sqrtf(p.x * p.x + p.y * p.y + p.z * p.z) - 1.0f;
-}
-
 glm::vec3 interpolateVertex(glm::vec4 corner1, glm::vec4 corner2,
         float isolevel)
 {
@@ -323,22 +318,23 @@ glm::vec3 interpolateVertex(glm::vec4 corner1, glm::vec4 corner2,
             corner1.z + midpointDistance * (corner2.z - corner1.z));
 }
 
-glm::vec3 vertexNormal(glm::vec3 vertex)
+glm::vec3 vertexNormal(SignedDistanceFunction* sdf, glm::vec3 vertex)
 {
 	const float h = 0.0001;
 	return glm::normalize(
 		glm::vec3(1.0f, -1.0f, -1.0f)
-            * unitSphereSDF(vertex + glm::vec3( 1.0f, -1.0f, -1.0f) * h) +
+            * sdf->distance(vertex + glm::vec3( 1.0f, -1.0f, -1.0f) * h) +
         glm::vec3(-1.0f, -1.0f, 1.0f)
-            * unitSphereSDF(vertex + glm::vec3(-1.0f, -1.0f,  1.0f) * h) +
+            * sdf->distance(vertex + glm::vec3(-1.0f, -1.0f,  1.0f) * h) +
 		glm::vec3(-1.0f, 1.0f, -1.0f)
-            * unitSphereSDF(vertex + glm::vec3(-1.0f,  1.0f, -1.0f) * h) +
+            * sdf->distance(vertex + glm::vec3(-1.0f,  1.0f, -1.0f) * h) +
 		glm::vec3(1.0f, 1.0f, 1.0f)
-            * unitSphereSDF(vertex + glm::vec3( 1.0f,  1.0f,  1.0f) * h)
+            * sdf->distance(vertex + glm::vec3( 1.0f,  1.0f,  1.0f) * h)
 	);
 }
 
-void polygonize(glm::vec3 center, glm::vec3 radius, float isolevel,
+void polygonize(SignedDistanceFunction* sdf, glm::vec3 center,
+        glm::vec3 radius, float isolevel,
         std::vector<glm::vec3> &vertexBufferData)
 {
 	// Calculates the positions of the corners of the sampling cube and the
@@ -355,7 +351,7 @@ void polygonize(glm::vec3 center, glm::vec3 radius, float isolevel,
 					center.y + i * radius.y,
 					center.z - j * k * radius.z,
 					0.0f);
-				corners[n].w = unitSphereSDF(corners[n]);
+				corners[n].w = sdf->distance(corners[n]);
 			}
 		}
 	}
@@ -426,16 +422,16 @@ void polygonize(glm::vec3 center, glm::vec3 radius, float isolevel,
 	for (int i = 0; triTable[cubeIndex][i] != -1; i += 3)
 	{
 		vertexBufferData.push_back(vertices[triTable[cubeIndex][i]]);
-		vertexBufferData.push_back(vertexNormal(vertexBufferData.back()));
+		vertexBufferData.push_back(vertexNormal(sdf, vertexBufferData.back()));
 		vertexBufferData.push_back(vertices[triTable[cubeIndex][i + 1]]);
-		vertexBufferData.push_back(vertexNormal(vertexBufferData.back()));
+		vertexBufferData.push_back(vertexNormal(sdf, vertexBufferData.back()));
 		vertexBufferData.push_back(vertices[triTable[cubeIndex][i + 2]]);
-		vertexBufferData.push_back(vertexNormal(vertexBufferData.back()));
+		vertexBufferData.push_back(vertexNormal(sdf, vertexBufferData.back()));
 	}
 }
 
-void marchingCubes(glm::vec3 min, glm::vec3 max, int resolution,
-        std::vector<glm::vec3> &vertexBufferData)
+void marchingCubes(SignedDistanceFunction* sdf, glm::vec3 min, glm::vec3 max,
+        int resolution, std::vector<glm::vec3> &vertexBufferData)
 {
 	glm::vec3 step = (max - min) / (float)resolution;
 	glm::vec3 radius = step * 0.5f;
@@ -449,7 +445,7 @@ void marchingCubes(glm::vec3 min, glm::vec3 max, int resolution,
 				glm::vec3 center = glm::vec3(min.x + step.x * i,
                                              min.y + step.y * j,
                                              min.z + step.z * k);
-				polygonize(center, radius, 0.0f, vertexBufferData);
+				polygonize(sdf, center, radius, 0.0f, vertexBufferData);
 			}
 		}
 	}

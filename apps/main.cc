@@ -26,7 +26,7 @@ const GLint WIDTH = 512, HEIGHT = 512;
 // Parameters for the marching cubes algorithm.
 const glm::vec3 MIN = glm::vec3(-1.0f, -1.0f, -1.0f);
 const glm::vec3 MAX = glm::vec3(1.0f, 1.0f, 1.0f);
-const int RESOLUTION = 10;
+const int RESOLUTION = 50;
 
 /*
 	Returns a vector representing the position of the camera as a function of time.
@@ -77,9 +77,29 @@ int main(int argc, char *argv[])
 
 	Shader shader("marching_cubes.vs", "marching_cubes.fs");
 
-	std::vector<glm::vec3> vertexBufferData;
-	marchingCubes(MIN, MAX, RESOLUTION, vertexBufferData);
+    
+    // Initialize sphere data.
+    SphereSDF unitSphere(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f);
+    std::vector<glm::vec3> sphereVertexBufferData;
+    marchingCubes((SignedDistanceFunction*)&unitSphere, MIN, MAX, RESOLUTION,
+            sphereVertexBufferData);
 
+    // Initialize box data.
+    BoxSDF box(glm::vec3(0.8f, 0.8f, 0.8f));
+    std::vector<glm::vec3> boxVertexBufferData;
+    marchingCubes((SignedDistanceFunction*)&box, MIN, MAX, RESOLUTION,
+            boxVertexBufferData);
+
+    // initialize torus data
+    TorusSDF torus(glm::vec2(0.8f, 0.2f));
+	std::vector<glm::vec3> torusVertexBufferData;
+	marchingCubes((SignedDistanceFunction*)&torus, MIN, MAX, RESOLUTION,
+            torusVertexBufferData);
+
+    // Render sphere by default.
+    std::vector<glm::vec3> vertexBufferData = sphereVertexBufferData;
+
+    // Pass data to OpenGL.
 	GLuint VAO, VBO;
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -109,9 +129,37 @@ int main(int argc, char *argv[])
 			{
 				break;
 			}
-            else if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_ESCAPE)
+            else if (windowEvent.type == SDL_KEYDOWN)
             {
-                break;
+                auto keypress = windowEvent.key.keysym.sym;
+                if (keypress == SDLK_ESCAPE)
+                {
+                    break;
+                }
+                else if (keypress == SDLK_1)
+                {
+                    vertexBufferData = sphereVertexBufferData;
+	                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	                glBufferData(GL_ARRAY_BUFFER,
+                            vertexBufferData.size() * sizeof(glm::vec3),
+                            &vertexBufferData.front(), GL_STATIC_DRAW);
+                }
+                else if (keypress == SDLK_2)
+                {
+                    vertexBufferData = boxVertexBufferData;
+	                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	                glBufferData(GL_ARRAY_BUFFER,
+                            vertexBufferData.size() * sizeof(glm::vec3),
+                            &vertexBufferData.front(), GL_STATIC_DRAW);
+                }
+                else if (keypress == SDLK_3)
+                {
+                    vertexBufferData = torusVertexBufferData;
+	                glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	                glBufferData(GL_ARRAY_BUFFER,
+                            vertexBufferData.size() * sizeof(glm::vec3),
+                            &vertexBufferData.front(), GL_STATIC_DRAW);
+                }
             }
 		}
 
